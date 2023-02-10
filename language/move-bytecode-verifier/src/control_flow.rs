@@ -12,6 +12,7 @@
 //!   back edges).
 //!
 //! For bytecode versions 5 and below, delegates to `control_flow_v5`.
+use crate::meter::Meter;
 use crate::{
     control_flow_v5,
     loop_summary::{LoopPartition, LoopSummary},
@@ -37,6 +38,8 @@ pub fn verify_function<'a>(
     index: FunctionDefinitionIndex,
     function_definition: &'a FunctionDefinition,
     code: &'a CodeUnit,
+    // TODO: connect meter to control flow analysis
+    _meter: &mut impl Meter,
 ) -> PartialVMResult<FunctionView<'a>> {
     let function_handle = module.function_handle_at(function_definition.function);
 

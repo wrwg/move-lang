@@ -5,6 +5,7 @@
 //! This module defines the transfer functions for verifying type safety of a procedure body.
 //! It does not utilize control flow, but does check each block independently
 
+use crate::meter::Meter;
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
     control_flow_graph::ControlFlowGraph,
@@ -83,6 +84,7 @@ impl<'a> TypeSafetyChecker<'a> {
 pub(crate) fn verify<'a>(
     resolver: &'a BinaryIndexedView<'a>,
     function_view: &'a FunctionView<'a>,
+    meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
     let verifier = &mut TypeSafetyChecker::new(resolver, function_view);
 

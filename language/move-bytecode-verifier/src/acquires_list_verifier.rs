@@ -23,6 +23,7 @@ use move_binary_format::{
     safe_unwrap,
 };
 use move_core_types::vm_status::StatusCode;
+use crate::meter::Meter;
 
 pub(crate) struct AcquiresVerifier<'a> {
     module: &'a CompiledModule,
@@ -37,6 +38,7 @@ impl<'a> AcquiresVerifier<'a> {
         module: &'a CompiledModule,
         index: FunctionDefinitionIndex,
         function_definition: &'a FunctionDefinition,
+        meter: &mut impl Meter
     ) -> PartialVMResult<()> {
         let annotated_acquires = function_definition
             .acquires_global_resources

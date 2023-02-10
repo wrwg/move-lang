@@ -8,6 +8,7 @@ use move_binary_format::{
     errors::PartialVMResult,
     file_format::{Bytecode, CompiledModule, FunctionDefinitionIndex, TableIndex},
 };
+use move_bytecode_verifier::meter::DummyMeter;
 use move_bytecode_verifier::{control_flow, VerifierConfig};
 use move_core_types::vm_status::StatusCode;
 
@@ -30,6 +31,7 @@ fn verify_module(verifier_config: &VerifierConfig, module: &CompiledModule) -> P
             current_function,
             function_definition,
             code,
+            &mut DummyMeter,
         )?;
     }
     Ok(())

@@ -11,6 +11,10 @@
 mod abstract_state;
 
 use crate::absint::{AbstractInterpreter, TransferFunctions};
+use crate::meter::Meter;
+use crate::reference_safety::abstract_state::{
+    STEP_BASE_COST, STEP_PER_LOCAL_COST, STEP_PER_NODE_COST,
+};
 use abstract_state::{AbstractState, AbstractValue};
 use move_binary_format::{
     binary_views::{BinaryIndexedView, FunctionView},
@@ -50,11 +54,12 @@ pub(crate) fn verify<'a>(
     resolver: &'a BinaryIndexedView<'a>,
     function_view: &FunctionView,
     name_def_map: &'a HashMap<IdentifierIndex, FunctionDefinitionIndex>,
+    meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
     let initial_state = AbstractState::new(function_view);
 
     let mut verifier = ReferenceSafetyAnalysis::new(resolver, function_view, name_def_map);
-    verifier.analyze_function(initial_state, function_view)
+    verifier.analyze_function(initial_state, function_view, meter)
 }
 
 fn call(
@@ -139,7 +144,12 @@ fn execute_inner(
     state: &mut AbstractState,
     bytecode: &Bytecode,
     offset: CodeOffset,
+    meter: &mut impl Meter,
 ) -> PartialVMResult<()> {
+    meter.add(STEP_BASE_COST)?;
+    meter.add_items(STEP_PER_LOCAL_COST, state.local_count())?;
+    meter.add_items(STEP_PER_NODE_COST, state.node_count())?;
+
     match bytecode {
         Bytecode::Pop => state.release_value(safe_unwrap!(verifier.stack.pop())),
 
@@ -416,8 +426,9 @@ impl<'a> TransferFunctions for ReferenceSafetyAnalysis<'a> {
         bytecode: &Bytecode,
         index: CodeOffset,
         last_index: CodeOffset,
+        meter: &mut impl Meter,
     ) -> PartialVMResult<()> {
-        execute_inner(self, state, bytecode, index)?;
+        execute_inner(self, state, bytecode, index, meter)?;
         if index == last_index {
             safe_assert!(self.stack.is_empty());
             *state = state.construct_canonical_state()

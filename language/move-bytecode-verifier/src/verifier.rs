@@ -34,6 +34,7 @@ pub struct VerifierConfig {
     pub max_back_edges_per_function: Option<usize>,
     pub max_back_edges_per_module: Option<usize>,
     pub max_basic_blocks_in_script: Option<usize>,
+    pub max_meter_units: Option<u128>,
 }
 
 /// Helper for a "canonical" verification of a module.
@@ -151,6 +152,8 @@ impl Default for VerifierConfig {
             max_back_edges_per_function: None,
             max_back_edges_per_module: None,
             max_basic_blocks_in_script: None,
+            /// General metering for the verifier
+            max_meter_units: None,
         }
     }
 }

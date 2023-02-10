@@ -75,6 +75,7 @@ fn test_vec_pack() {
             max_back_edges_per_function: Some(20),
             max_back_edges_per_module: Some(400),
             max_basic_blocks_in_script: Some(1024),
+            max_meter_units: None,
         },
         &m,
     )

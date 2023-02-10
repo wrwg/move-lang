@@ -4,6 +4,7 @@
 
 //! This module defines the abstract state for the type and memory safety analysis.
 use crate::absint::{AbstractDomain, JoinResult};
+use crate::meter::Meter;
 use move_binary_format::{
     binary_views::FunctionView,
     errors::{PartialVMError, PartialVMResult},
@@ -69,6 +70,13 @@ impl std::fmt::Display for Label {
     }
 }
 
+pub(crate) const STEP_BASE_COST: u128 = 100;
+pub(crate) const STEP_PER_LOCAL_COST: u128 = 10;
+pub(crate) const STEP_PER_NODE_COST: u128 = 10;
+pub(crate) const JOIN_BASE_COST: u128 = 200;
+pub(crate) const JOIN_PER_LOCAL_COST: u128 = 20;
+pub(crate) const JOIN_PER_NODE_COST: u128 = 20;
+
 /// AbstractState is the analysis state over which abstract interpretation is performed.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct AbstractState {
@@ -105,6 +113,14 @@ impl AbstractState {
 
         assert!(state.is_canonical());
         state
+    }
+
+    pub(crate) fn local_count(&self) -> usize {
+        self.locals.len()
+    }
+
+    pub(crate) fn node_count(&self) -> usize {
+        self.borrow_graph.node_count()
     }
 
     /// returns the frame root id
@@ -669,10 +685,17 @@ impl AbstractState {
 
 impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
-    fn join(&mut self, state: &AbstractState) -> JoinResult {
+    fn join(
+        &mut self,
+        state: &AbstractState,
+        meter: &mut impl Meter,
+    ) -> PartialVMResult<JoinResult> {
         let joined = Self::join_(self, state);
         assert!(joined.is_canonical());
         assert!(self.locals.len() == joined.locals.len());
+        meter.add(JOIN_BASE_COST)?;
+        meter.add_items(JOIN_PER_LOCAL_COST, self.locals.len())?;
+        meter.add_items(JOIN_PER_NODE_COST, self.borrow_graph.node_count())?;
         let locals_unchanged = self
             .locals
             .iter()
@@ -681,10 +704,10 @@ impl AbstractDomain for AbstractState {
         // locals unchanged and borrow graph covered, return unchanged
         // else mark as changed and update the state
         if locals_unchanged && self.borrow_graph.leq(&joined.borrow_graph) {
-            JoinResult::Unchanged
+            Ok(JoinResult::Unchanged)
         } else {
             *self = joined;
-            JoinResult::Changed
+            Ok(JoinResult::Changed)
         }
     }
 }
